@@ -1,10 +1,19 @@
+import os  # <-- NEW: For reading environment configurations
 from datetime import datetime
+
 import altair as alt
 import classifier
 import database  # Permanent storage layer
+from dotenv import load_dotenv  # <-- NEW: For loading the .env file
 import pandas as pd
 import requests
 import streamlit as st
+
+# Load environment variables
+load_dotenv()
+
+# Read backend URL securely from environment
+BACKEND_URL = os.getenv("ECOOPS_CORE_API_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="EcoOps AI Dashboard", page_icon="🌱", layout="wide")
 
@@ -16,25 +25,23 @@ st.write("---")
 
 col1, col2, col3 = st.columns(3)
 
-# FIX: Initialize baseline fallbacks to protect form submissions from crashing with NameErrors
 backend_online = False
 savings_pct = 0.0
 best_hour = 0
 
 try:
-    # 1. Fetch current live telemetry first
-    grid_response = requests.get("http://localhost:8000/api/v1/grid-status").json()
+    # 1. Fetch current live telemetry using secure environment routing
+    grid_response = requests.get(f"{BACKEND_URL}/api/v1/grid-status").json()
     current_intensity = grid_response["carbon_intensity"]
 
-    # 2. FIX INTEGRATION: Pass the real-world intensity directly to the AI endpoint to align predictions
+    # 2. Pass the real-world intensity directly using environment routing
     ai_response = requests.get(
-        f"http://localhost:8000/api/v1/ai-recommendation?current_live_intensity={current_intensity}"
+        f"{BACKEND_URL}/api/v1/ai-recommendation?current_live_intensity={current_intensity}"
     ).json()
 
     best_hour = ai_response["recommended_hour_24h"]
     predicted_intensity = ai_response["predicted_carbon_intensity"]
 
-    # Calculate actual percentage savings dynamically
     savings_pct = round(
         ((current_intensity - predicted_intensity) / current_intensity) * 100, 1
     )
@@ -84,7 +91,7 @@ try:
 
 except Exception as e:
     st.error(
-        "Could not connect to the EcoOps AI core server. Please verify Uvicorn is running on port 8000."
+        f"Could not connect to the EcoOps AI core server at {BACKEND_URL}. Please verify Uvicorn is running."
     )
 
 st.write("---")
@@ -105,7 +112,6 @@ with st.form("task_scheduler_form"):
     submit_button = st.form_submit_button("Route Task to EcoOps Agent")
 
     if submit_button:
-        # FIX: Explicit safeguard preventing submissions if core backend is down
         if not backend_online:
             st.error(
                 "Cannot route scheduling tasks while the core optimization server is offline."
@@ -116,7 +122,6 @@ with st.form("task_scheduler_form"):
                 classification = ai_decision["classification"]
                 reason = ai_decision["reason"]
 
-                # If the task is mission-critical, it runs instantly (0% carbon delay savings)
                 final_savings = (
                     0.0 if classification == "Mission-Critical" else savings_pct
                 )
@@ -126,7 +131,6 @@ with st.form("task_scheduler_form"):
                     else best_hour
                 )
 
-                # Log the snapshot record safely to the database file
                 database.log_task(
                     task_name,
                     developer_group,
@@ -156,11 +160,9 @@ st.markdown(
     "A permanent historical ledger of all intercepted pipelines managed by the optimization agent."
 )
 
-# Pull live logs from our database file
 raw_logs = database.get_all_logs()
 
 if raw_logs:
-    # Format database rows into a clean, searchable visual data grid table
     log_df = pd.DataFrame(
         raw_logs,
         columns=[
