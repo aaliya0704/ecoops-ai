@@ -22,10 +22,15 @@ savings_pct = 0.0
 best_hour = 0
 
 try:
+    # 1. Fetch current live telemetry first
     grid_response = requests.get("http://localhost:8000/api/v1/grid-status").json()
-    ai_response = requests.get("http://localhost:8000/api/v1/ai-recommendation").json()
-
     current_intensity = grid_response["carbon_intensity"]
+
+    # 2. FIX INTEGRATION: Pass the real-world intensity directly to the AI endpoint to align predictions
+    ai_response = requests.get(
+        f"http://localhost:8000/api/v1/ai-recommendation?current_live_intensity={current_intensity}"
+    ).json()
+
     best_hour = ai_response["recommended_hour_24h"]
     predicted_intensity = ai_response["predicted_carbon_intensity"]
 
