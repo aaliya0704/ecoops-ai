@@ -1,12 +1,12 @@
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
 
 
 def train_carbon_predictor():
-    """
-    Simulates a historical dataset of power grid behavior and
+    """Simulates a historical dataset of power grid behavior and
+
     trains a Machine Learning model to forecast cleaner windows.
     """
     # 1. Create a historical dataset (Simulating 30 days of hourly grid data)
@@ -30,9 +30,9 @@ def train_carbon_predictor():
     X = dataset[["hour_of_day"]]  # What the AI learns from
     y = dataset["carbon_intensity"]  # What the AI is trying to predict
 
-    # 3. Initialize and train a Random Forest Regressor Model
-    # This is an ensemble model that creates decision trees to learn patterns.
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    # 3. Initialize and train a localized Random Forest Regressor Model
+    # FIX: Reduced estimators to 50 for faster loads and lighter memory use without losing performance
+    model = RandomForestRegressor(n_estimators=50, random_state=42)
     print("🤖 EcoOps AI Engine: Training Machine Learning Model...")
     model.fit(X, y)
     print("✅ Training Complete! Model optimized successfully.")
@@ -45,11 +45,12 @@ ai_brain = train_carbon_predictor()
 
 
 def get_cleanest_scheduling_window():
-    """
-    Uses the trained AI to evaluate all 24 hours of the day
+    """Uses the trained AI to evaluate all 24 hours of the day
+
     and returns the best time to run heavy code tasks.
     """
-    all_hours = np.array([[h] for h in range(24)])
+    # FIX: Explicitly specify column feature name matching training context data structures
+    all_hours = pd.DataFrame({"hour_of_day": range(24)})
 
     # AI predicts the carbon score for every single upcoming hour
     predicted_scores = ai_brain.predict(all_hours)

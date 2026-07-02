@@ -1,11 +1,10 @@
-import streamlit as st
-import requests
-import pandas as pd
-import altair as alt
 from datetime import datetime
-
+import altair as alt
 import classifier
-import database  # <-- NEW: Import our database handling script
+import database  # Permanent storage layer
+import pandas as pd
+import requests
+import streamlit as st
 
 st.set_page_config(page_title="EcoOps AI Dashboard", page_icon="🌱", layout="wide")
 
@@ -17,6 +16,11 @@ st.write("---")
 
 col1, col2, col3 = st.columns(3)
 
+# FIX: Initialize baseline fallbacks to protect form submissions from crashing with NameErrors
+backend_online = False
+savings_pct = 0.0
+best_hour = 0
+
 try:
     grid_response = requests.get("http://localhost:8000/api/v1/grid-status").json()
     ai_response = requests.get("http://localhost:8000/api/v1/ai-recommendation").json()
@@ -24,13 +28,17 @@ try:
     current_intensity = grid_response["carbon_intensity"]
     best_hour = ai_response["recommended_hour_24h"]
     predicted_intensity = ai_response["predicted_carbon_intensity"]
+
+    # Calculate actual percentage savings dynamically
     savings_pct = round(
         ((current_intensity - predicted_intensity) / current_intensity) * 100, 1
     )
+    backend_online = True
 
     with col1:
         st.metric(
-            label="Current Grid Carbon Intensity", value=f"{current_intensity} gCO2/kWh"
+            label="Current Grid Carbon Intensity",
+            value=f"{current_intensity} gCO2/kWh",
         )
     with col2:
         st.metric(label="AI Recommended Run Time", value=f"{best_hour}:00 Local Time")
@@ -92,43 +100,51 @@ with st.form("task_scheduler_form"):
     submit_button = st.form_submit_button("Route Task to EcoOps Agent")
 
     if submit_button:
-        with st.spinner("🤖 AI Agent evaluating workflow safety impact..."):
-            ai_decision = classifier.classify_cloud_task(task_name)
-            classification = ai_decision["classification"]
-            reason = ai_decision["reason"]
-
-            # If the task is mission-critical, it runs instantly (0% carbon delay savings)
-            final_savings = 0.0 if classification == "Mission-Critical" else savings_pct
-            final_run_hour = (
-                datetime.now().hour
-                if classification == "Mission-Critical"
-                else best_hour
-            )
-
-            # ──── NEW FEATURE B: LOG THE RECORD TO THE DATABASE ────
-            database.log_task(
-                task_name,
-                developer_group,
-                classification,
-                final_run_hour,
-                final_savings,
-            )
-
-        st.write("### 📋 AI Assessment Breakdown:")
-        if classification == "Delay-Tolerant":
-            st.success(f"✅ **Status: {classification}**")
-            st.info(
-                f"🔮 **AI Scheduling Action:** This task has been successfully delayed. It will execute later today at **{best_hour}:00** when the grid is cleanest."
+        # FIX: Explicit safeguard preventing submissions if core backend is down
+        if not backend_online:
+            st.error(
+                "Cannot route scheduling tasks while the core optimization server is offline."
             )
         else:
-            st.warning(f"⚠️ **Status: {classification}**")
-            st.info(
-                f"🚀 **AI Scheduling Action:** This job affects production/users. Bypassing green delays to guarantee server performance. **Executing instantly.**"
-            )
+            with st.spinner("🤖 AI Agent evaluating workflow safety impact..."):
+                ai_decision = classifier.classify_cloud_task(task_name)
+                classification = ai_decision["classification"]
+                reason = ai_decision["reason"]
 
-        st.write(f"*AI Contextual Reasoning:* {reason}")
+                # If the task is mission-critical, it runs instantly (0% carbon delay savings)
+                final_savings = (
+                    0.0 if classification == "Mission-Critical" else savings_pct
+                )
+                final_run_hour = (
+                    datetime.now().hour
+                    if classification == "Mission-Critical"
+                    else best_hour
+                )
 
-# ──── NEW FEATURE B: DISPLAY HISTORIC AUDIT LOG TABLE ────
+                # Log the snapshot record safely to the database file
+                database.log_task(
+                    task_name,
+                    developer_group,
+                    classification,
+                    final_run_hour,
+                    final_savings,
+                )
+
+            st.write("### 📋 AI Assessment Breakdown:")
+            if classification == "Delay-Tolerant":
+                st.success(f"✅ **Status: {classification}**")
+                st.info(
+                    f"🔮 **AI Scheduling Action:** This task has been successfully delayed. It will execute later today at **{best_hour}:00** when the grid is cleanest."
+                )
+            else:
+                st.warning(f"⚠️ **Status: {classification}**")
+                st.info(
+                    f"🚀 **AI Scheduling Action:** This job affects production/users. Bypassing green delays to guarantee server performance. **Executing instantly.**"
+                )
+
+            st.write(f"*AI Contextual Reasoning:* {reason}")
+
+# DISPLAY HISTORIC AUDIT LOG TABLE
 st.write("---")
 st.subheader("📜 Enterprise Core Green Audit Logs")
 st.markdown(

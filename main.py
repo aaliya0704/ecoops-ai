@@ -1,9 +1,12 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import requests
-from datetime import datetime
-from typing import List, Dict
+from datetime import (
+    datetime,
+    timezone,
+)  # FIX: Added timezone to fix the utcnow deprecation
+from typing import Dict, List
 import brain
+from fastapi import FastAPI, HTTPException
+import numpy as np  # FIX: Lifted import up to the global scope
+from pydantic import BaseModel
 
 app = FastAPI(title="EcoOps AI - Unified Core Engine")
 
@@ -18,7 +21,7 @@ class GridMetric(BaseModel):
 class AIRecommendation(BaseModel):
     recommended_hour_24h: int
     predicted_carbon_intensity: float
-    hourly_forecast: List[Dict[str, float]]  # Added to return the full 24h array
+    hourly_forecast: List[Dict[str, float]]  # Returns the full 24h array
     status: str
 
 
@@ -40,7 +43,8 @@ def get_live_grid_data(region: str = "US-NW"):
     return {
         "region": region,
         "carbon_intensity": mock_intensity,
-        "timestamp": datetime.utcnow().isoformat(),
+        # FIX: Swapped out deprecated utcnow() for modern timezone-aware syntax
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "source": "ElectricityMaps V3 API Gateway",
     }
 
@@ -49,8 +53,6 @@ def get_live_grid_data(region: str = "US-NW"):
 def get_ai_scheduling_prediction():
     try:
         # Get the best hour and the raw predictions array from brain.py
-        import numpy as np
-
         all_hours = np.array([[h] for h in range(24)])
         predicted_scores = brain.ai_brain.predict(all_hours)
 
