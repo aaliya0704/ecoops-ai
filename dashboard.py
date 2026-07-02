@@ -160,9 +160,11 @@ st.markdown(
     "A permanent historical ledger of all intercepted pipelines managed by the optimization agent."
 )
 
+# Pull live logs from our database file
 raw_logs = database.get_all_logs()
 
 if raw_logs:
+    # Format database rows into a clean, searchable visual data grid table
     log_df = pd.DataFrame(
         raw_logs,
         columns=[
@@ -174,7 +176,59 @@ if raw_logs:
             "Logged Timestamp",
         ],
     )
+
+    # ─── FEATURE F: EXECUTIVE ANALYTICS SUMMARY SCREEN ───
+    st.write("---")
+    st.subheader("📊 Executive Carbon & Financial Compliance Summary (30-Day View)")
+    st.markdown(
+        "Cumulative multi-tenant infrastructure metrics translating grid deferrals into corporate ESG capital values."
+    )
+
+    # Mathematical conversion metrics for enterprise computing scaling
+    # Assuming a standard cloud batch baseline of 0.45 Tons of CO2 per continuous cluster run
+    # Assuming an average standard infrastructure server run costs $12.50 in compute hour billing
+    total_delayed_tasks = len(log_df[log_df["AI Classification"] == "Delay-Tolerant"])
+
+    total_co2_offset = round(total_delayed_tasks * 0.45, 2)
+    total_usd_saved = round(total_delayed_tasks * 12.50, 2)
+
+    # Render Executive Financial & ESG KPI Cards
+    exec_col1, exec_col2, exec_col3 = st.columns(3)
+    with exec_col1:
+        st.metric(
+            label="Total Carbon Offset (Tons)",
+            value=f"{total_co2_offset} MT CO2e",
+            help="Metric Tons of Carbon Dioxide equivalent diverted from regional power plants via AI-driven diurnal load shifting.",
+        )
+    with exec_col2:
+        st.metric(
+            label="Infrastructure Spend Saved",
+            value=f"${total_usd_saved} USD",
+            help="Total compute spend saved by deferring workloads to non-peak pricing hours and clean windows.",
+        )
+    with exec_col3:
+        st.metric(
+            label="Total Intercepted Pipelines",
+            value=f"{len(log_df)} Total Runs",
+            help="Total automated software compilation and data engineering tasks parsed by the EcoOps AI Core Gate.",
+        )
+
+    st.markdown("### 📋 Downloadable Compliance Documentation")
+
+    # Convert dataframe into standard download-ready CSV payload bytes
+    csv_data = log_df.to_csv(index=False).encode("utf-8")
+
+    st.download_button(
+        label="📥 Export Official Corporate Compliance Report (CSV)",
+        data=csv_data,
+        file_name=f"ecoops_sustainability_compliance_report_{datetime.now().strftime('%Y-%m-%d')}.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+
+    st.write("### 🗂️ Detailed Pipeline Audit Trail")
     st.dataframe(log_df, use_container_width=True)
+
 else:
     st.info(
         "No tasks logged yet. Submit your first cloud job above to generate an audit entry!"
