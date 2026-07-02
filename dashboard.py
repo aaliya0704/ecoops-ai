@@ -2,8 +2,10 @@ import streamlit as st
 import requests
 import pandas as pd
 import altair as alt
+from datetime import datetime
 
 import classifier
+import database  # <-- NEW: Import our database handling script
 
 st.set_page_config(page_title="EcoOps AI Dashboard", page_icon="🌱", layout="wide")
 
@@ -39,17 +41,11 @@ try:
             delta=f"-{savings_pct}% Carbon",
         )
 
-    # ──── NEW FEATURE A: RENDERING THE 24-HOUR FORECAST CHART ────
+    # Render the 24-Hour Forecast Chart
     st.write("---")
     st.subheader("📊 AI-Predicted 24-Hour Regional Grid Carbon Timeline")
-    st.markdown(
-        "The line visualization maps out upcoming carbon variations. Aim to execute massive processing loads in the green valleys."
-    )
-
-    # Extract the forecast array and wrap it into a pandas DataFrame
     forecast_data = pd.DataFrame(ai_response["hourly_forecast"])
 
-    # Configure an elegant Altair line chart with point highlights
     chart = (
         alt.Chart(forecast_data)
         .mark_line(color="#10b981", strokeWidth=3)
@@ -62,18 +58,15 @@ try:
             y=alt.Y("predicted_intensity:Q", title="Carbon Intensity (gCO2/kWh)"),
             tooltip=["hour", "predicted_intensity"],
         )
-        .properties(height=350)
+        .properties(height=300)
         .interactive()
-    )  # Allows the chart to zoom and pan smoothly
+    )
 
-    # Draw points on top of the line for crisp scannability
     points = (
         alt.Chart(forecast_data)
         .mark_point(color="#34d399", size=60)
         .encode(x="hour:Q", y="predicted_intensity:Q")
     )
-
-    # Render the combined layered chart on the dashboard layout screen
     st.altair_chart(chart + points, use_container_width=True)
 
 except Exception as e:
@@ -83,10 +76,8 @@ except Exception as e:
 
 st.write("---")
 
+# Interacting and Scheduling Section
 st.subheader("🤖 Automated Task Scheduler Agent")
-st.write(
-    "Submit non-urgent code or pipeline infrastructure to let the AI execute it at the greenest window."
-)
 
 with st.form("task_scheduler_form"):
     task_name = st.text_input(
@@ -106,6 +97,23 @@ with st.form("task_scheduler_form"):
             classification = ai_decision["classification"]
             reason = ai_decision["reason"]
 
+            # If the task is mission-critical, it runs instantly (0% carbon delay savings)
+            final_savings = 0.0 if classification == "Mission-Critical" else savings_pct
+            final_run_hour = (
+                datetime.now().hour
+                if classification == "Mission-Critical"
+                else best_hour
+            )
+
+            # ──── NEW FEATURE B: LOG THE RECORD TO THE DATABASE ────
+            database.log_task(
+                task_name,
+                developer_group,
+                classification,
+                final_run_hour,
+                final_savings,
+            )
+
         st.write("### 📋 AI Assessment Breakdown:")
         if classification == "Delay-Tolerant":
             st.success(f"✅ **Status: {classification}**")
@@ -119,3 +127,32 @@ with st.form("task_scheduler_form"):
             )
 
         st.write(f"*AI Contextual Reasoning:* {reason}")
+
+# ──── NEW FEATURE B: DISPLAY HISTORIC AUDIT LOG TABLE ────
+st.write("---")
+st.subheader("📜 Enterprise Core Green Audit Logs")
+st.markdown(
+    "A permanent historical ledger of all intercepted pipelines managed by the optimization agent."
+)
+
+# Pull live logs from our database file
+raw_logs = database.get_all_logs()
+
+if raw_logs:
+    # Format database rows into a clean, searchable visual data grid table
+    log_df = pd.DataFrame(
+        raw_logs,
+        columns=[
+            "Task Name",
+            "Engineering Team",
+            "AI Classification",
+            "Scheduled Hour",
+            "Carbon Saved %",
+            "Logged Timestamp",
+        ],
+    )
+    st.dataframe(log_df, use_container_width=True)
+else:
+    st.info(
+        "No tasks logged yet. Submit your first cloud job above to generate an audit entry!"
+    )
