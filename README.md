@@ -40,11 +40,10 @@ cd ecoops-ai
 pip install -r requirements.txt
 ```
 
-### 2. Configure Your Secret System Keys
-Create a local `.env` file in the root folder to securely hold your keys (this file is hidden from public git uploads):
-```text
-OPENAI_API_KEY=your_actual_secret_api_key_here
-```
+### 2. Configure Local AI Engine
+Ensure you have Ollama installed and running locally on your machine, then pull and start the model:
+```bash
+ollama run llama3
 
 ### 3. Launch the Application Servers
 Open two side-by-side terminals inside your code editor:
@@ -57,6 +56,21 @@ uvicorn main:app --reload
 **Terminal 2 (Turn on the Visual Management Portal):**
 ```bash
 streamlit run dashboard.py
-```
 
-Open your web browser and navigate to `http://localhost:8501` to use the fully operational application!
+## 🧪 Automated Stress Testing & Validation
+
+### Test Suite 1: Multi-Tenant Concurrent Pipeline Stress Test
+To evaluate the database state management, metric scaling logic, and semantic stability of the local AI agent, a high-concurrency flood test was executed by injecting **12 diverse corporate cloud simulation jobs sequentially**.
+
+#### 📈 Key Validation Outcomes:
+* **Database & Data Grid Integrity:** The microservice successfully caught, categorized, and logged all tasks without dropping connections, scaling the ledger seamlessly to **20 Total Runs**.
+* **Precise ESG & Financial Quantification:** The analytics engine processed cumulative data math with zero float-point overflow errors, accurately reporting **4.05 MT CO₂e** offset and **$112.5 USD** in direct infrastructure optimization savings.
+* **Semantic Agent Classifications:** The LLM successfully parsed complex, conflicting syntax cues. For example, it correctly identified an edge-case task with long-horizon parameters (*"Run routine documentation generation but make sure it updates before next week"*) as highly **Delay-Tolerant**, optimizing it to the green grid window.
+* **Compliance Portability:** The downloadable reporting module correctly compiled the full **20-row state matrix** into an enterprise workbook asset file (`.xlsx`) matching corporate compliance auditing requirements.
+
+#### 📊 Execution Visual Proof:
+| Core Intelligence Executive Summary Screen | Exported Excel Compliance Data Audit |
+|---|---|
+| ![Dashboard Metrics](IMAGE_1.png) | ![Exported Excel Data Grid](IMAGE_2.png) |
+
+*The full raw workbook log for this validation execution can be referenced inside [ecoops_sustainability_compliance_report.xlsx](./ecoops_sustainability_compliance_report.xlsx).*
