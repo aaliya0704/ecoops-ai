@@ -2,7 +2,7 @@
 
 EcoOps AI is an **intelligent, context-aware green computing traffic controller** built to address two critical enterprise challenges:
 
-- 🌍 Automating compliance with corporate sustainability regulations (including Scope 3 emissions)
+- 🌍 Helping enterprises measure, manage, and report cloud-related carbon emissions for sustainability and ESG reporting (including Scope 3 emissions)
 - 💰 Reducing cloud computing costs by intelligently scheduling workloads during low-carbon energy periods
 
 ---
