@@ -173,6 +173,14 @@ The complete audit workbook can be found here:
 
 ---
 
+### Test Suite 2: Core API Offline & Telemetry Ingestion Simulation
+To verify enterprise resiliency, the live external telemetry endpoint (`PUBLIC_GRID_API_URL`) was intentionally routed to a non-existent URL (`/broken-endpoint-test`) to simulate a live grid feed outage or malicious payload scenario.
+
+#### 📈 Key Validation Outcomes:
+* **Fault-Tolerant Microservice Fallback:** The ingestion engine detected the connection failure without crashing, cleanly logging `[⚠️ Ingestion Warning] Live feed offline...` in Terminal 1.
+* **Seamless UI Resilience:** The Streamlit dashboard intercepted the API error, instantly activating the internal simulation core fallback values ($150\text{ gCO}_2/\text{kWh}$) to generate the 24-hour predictive timeline without displaying red runtime errors.
+* **Data Continuity:** Pipeline requests continued executing seamlessly, scaling the total ledger from **20 to 21 Total Runs** during offline mode.
+
 # 📄 License
 
 This project is intended for educational and portfolio purposes.
